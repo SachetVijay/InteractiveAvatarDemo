@@ -7,11 +7,10 @@ import {
   STTProvider,
   ElevenLabsModel,
 } from "@heygen/streaming-avatar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useMemoizedFn, useUnmount } from "ahooks";
 
 import { Button } from "./Button";
-import { AvatarConfig } from "./AvatarConfig";
 import { AvatarVideo } from "./AvatarSession/AvatarVideo";
 import { useStreamingAvatarSession } from "./logic/useStreamingAvatarSession";
 import { AvatarControls } from "./AvatarSession/AvatarControls";
@@ -20,14 +19,13 @@ import { StreamingAvatarProvider, StreamingAvatarSessionState } from "./logic";
 import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
 
-import { AVATARS } from "@/app/lib/constants";
-
-const DEFAULT_CONFIG: StartAvatarRequest = {
-  quality: AvatarQuality.Low,
-  avatarName: AVATARS[0].avatar_id,
+// Fixed configuration for the demo
+const FIXED_CONFIG: StartAvatarRequest = {
+  quality: AvatarQuality.High,
+  avatarName: "Ann_Therapist_public", // Using Ann Therapist as the default avatar
   knowledgeId: undefined,
   voice: {
-    rate: 1.5,
+    rate: 1.0,
     emotion: VoiceEmotion.EXCITED,
     model: ElevenLabsModel.eleven_flash_v2_5,
   },
@@ -43,8 +41,6 @@ function InteractiveAvatar() {
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
 
-  const [config, setConfig] = useState<StartAvatarRequest>(DEFAULT_CONFIG);
-
   const mediaStream = useRef<HTMLVideoElement>(null);
 
   async function fetchAccessToken() {
@@ -52,10 +48,19 @@ function InteractiveAvatar() {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Token fetch error:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`Failed to get access token: ${errorText}`);
+      }
+      
       const token = await response.text();
-
-      console.log("Access Token:", token); // Log the token to verify
-
+      console.log("Successfully received token");
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
@@ -65,47 +70,30 @@ function InteractiveAvatar() {
 
   const startSessionV2 = useMemoizedFn(async (isVoiceChat: boolean) => {
     try {
+      console.log("Starting session...");
       const newToken = await fetchAccessToken();
+      console.log("Token received, initializing avatar...");
       const avatar = initAvatar(newToken);
 
-      avatar.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
-        console.log("Avatar started talking", e);
-      });
-      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-        console.log("Avatar stopped talking", e);
+      // Set up event listeners
+      avatar.on(StreamingEvents.STREAM_READY, (event) => {
+        console.log("Stream ready:", event.detail);
       });
       avatar.on(StreamingEvents.STREAM_DISCONNECTED, () => {
         console.log("Stream disconnected");
       });
-      avatar.on(StreamingEvents.STREAM_READY, (event) => {
-        console.log(">>>>> Stream ready:", event.detail);
-      });
-      avatar.on(StreamingEvents.USER_START, (event) => {
-        console.log(">>>>> User started talking:", event);
-      });
-      avatar.on(StreamingEvents.USER_STOP, (event) => {
-        console.log(">>>>> User stopped talking:", event);
-      });
-      avatar.on(StreamingEvents.USER_END_MESSAGE, (event) => {
-        console.log(">>>>> User end message:", event);
-      });
-      avatar.on(StreamingEvents.USER_TALKING_MESSAGE, (event) => {
-        console.log(">>>>> User talking message:", event);
-      });
-      avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (event) => {
-        console.log(">>>>> Avatar talking message:", event);
-      });
-      avatar.on(StreamingEvents.AVATAR_END_MESSAGE, (event) => {
-        console.log(">>>>> Avatar end message:", event);
-      });
 
-      await startAvatar(config);
+      console.log("Starting avatar with config:", FIXED_CONFIG);
+      await startAvatar(FIXED_CONFIG);
 
       if (isVoiceChat) {
+        console.log("Starting voice chat...");
         await startVoiceChat();
       }
     } catch (error) {
       console.error("Error starting avatar session:", error);
+      // You might want to show this error to the user
+      alert("Failed to start session. Please check the console for details.");
     }
   });
 
@@ -129,7 +117,10 @@ function InteractiveAvatar() {
           {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
             <AvatarVideo ref={mediaStream} />
           ) : (
-            <AvatarConfig config={config} onConfigChange={setConfig} />
+            <div className="flex flex-col items-center justify-center gap-4 p-8">
+              <h2 className="text-2xl font-semibold text-white">Interactive Avatar Demo</h2>
+              <p className="text-zinc-400 text-center">Start a conversation with Ann, your AI therapist</p>
+            </div>
           )}
         </div>
         <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
@@ -156,10 +147,4 @@ function InteractiveAvatar() {
   );
 }
 
-export default function InteractiveAvatarWrapper() {
-  return (
-    <StreamingAvatarProvider basePath={process.env.NEXT_PUBLIC_BASE_API_URL}>
-      <InteractiveAvatar />
-    </StreamingAvatarProvider>
-  );
-}
+export default InteractiveAvatar;
