@@ -24,7 +24,7 @@ import { MessageHistory } from "./AvatarSession/MessageHistory";
 // ⏱️ Fixed session duration (2 minutes)
 const SESSION_DURATION_MS = 2 * 60 * 1000;
 
-function InteractiveAvatar() {
+function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
@@ -56,10 +56,17 @@ function InteractiveAvatar() {
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          "cf-turnstile-response": turnstileToken,
+        }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+
         console.error("Token fetch error:", {
           status: response.status,
           statusText: response.statusText,
@@ -67,9 +74,10 @@ function InteractiveAvatar() {
         });
         throw new Error(`Failed to get access token: ${errorText}`);
       }
-
       const token = await response.text();
+
       console.log("Successfully received token");
+
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
