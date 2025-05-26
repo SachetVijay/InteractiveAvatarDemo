@@ -24,23 +24,6 @@ import { MessageHistory } from "./AvatarSession/MessageHistory";
 // ⏱️ Fixed session duration (2 minutes)
 const SESSION_DURATION_MS = 2 * 60 * 1000;
 
-// Avatar configuration
-const FIXED_CONFIG: StartAvatarRequest = {
-  quality: AvatarQuality.High,
-  avatarName: "Ann_Therapist_public",
-  knowledgeId: "9ec7cfe8b1c34f29ac5a45acb3e26deb",
-  voice: {
-    rate: 1.0,
-    emotion: VoiceEmotion.EXCITED,
-    model: ElevenLabsModel.eleven_flash_v2_5,
-  },
-  language: "en",
-  voiceChatTransport: VoiceChatTransport.LIVEKIT,
-  sttSettings: {
-    provider: STTProvider.DEEPGRAM,
-  },
-};
-
 function InteractiveAvatar() {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
@@ -50,6 +33,23 @@ function InteractiveAvatar() {
 
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<"hi" | "en" | null>(null);
+
+  const getAvatarConfig = (): StartAvatarRequest => ({
+    quality: AvatarQuality.High,
+    avatarName: "Ann_Therapist_public",
+    knowledgeId: "9ec7cfe8b1c34f29ac5a45acb3e26deb",
+    voice: {
+      rate: 1.0,
+      emotion: VoiceEmotion.EXCITED,
+      model: ElevenLabsModel.eleven_flash_v2_5,
+    },
+    language: selectedLanguage ?? "en", // fallback just in case
+    voiceChatTransport: VoiceChatTransport.LIVEKIT,
+    sttSettings: {
+      provider: STTProvider.DEEPGRAM,
+    },
+  });  
 
   // Get token from API
   async function fetchAccessToken() {
@@ -92,8 +92,8 @@ function InteractiveAvatar() {
         console.log("Stream disconnected");
       });
 
-      console.log("Starting avatar with config:", FIXED_CONFIG);
-      await startAvatar(FIXED_CONFIG);
+      console.log("Starting avatar with config:", getAvatarConfig());
+      await startAvatar(getAvatarConfig());
 
       if (isVoiceChat) {
         console.log("Starting voice chat...");
@@ -151,14 +151,22 @@ function InteractiveAvatar() {
           {sessionState === StreamingAvatarSessionState.CONNECTED ? (
             <AvatarControls />
           ) : sessionState === StreamingAvatarSessionState.INACTIVE ? (
-            <div className="flex flex-row gap-4">
-              <Button onClick={() => startSessionV2(true)}>
-                Start Voice Chat
-              </Button>
-              <Button onClick={() => startSessionV2(false)}>
-                Start Text Chat
-              </Button>
-            </div>
+            <>
+              {!selectedLanguage ? (
+                <div className="flex flex-col gap-3 text-white items-center">
+                  <p className="text-lg">Choose a language to continue:</p>
+                  <div className="flex flex-row gap-4">
+                    <Button onClick={() => setSelectedLanguage("en")}>English</Button>
+                    <Button onClick={() => setSelectedLanguage("hi")}>हिन्दी</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-row gap-4">
+                  <Button onClick={() => startSessionV2(true)}>Start Voice Chat</Button>
+                  <Button onClick={() => startSessionV2(false)}>Start Text Chat</Button>
+                </div>
+              )}
+            </>
           ) : (
             <LoadingIcon />
           )}

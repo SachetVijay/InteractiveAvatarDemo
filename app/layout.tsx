@@ -15,7 +15,7 @@ const fontMono = FontMono({
 export const metadata: Metadata = {
   title: {
     default: "TLC Onboarding by Interactive Avatar",
-    template: `%s - HeyGen Interactive Avatar SDK Demo`,
+    template: `%s - Interactive Avatar SDK Demo`,
   },
   icons: {
     icon: "/emblem.svg",
