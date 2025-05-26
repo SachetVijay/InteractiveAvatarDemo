@@ -7,23 +7,28 @@ import {
   STTProvider,
   ElevenLabsModel,
 } from "@heygen/streaming-avatar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, useUnmount } from "ahooks";
+
+import logo from "../public/logo.svg";
 
 import { Button } from "./Button";
 import { AvatarVideo } from "./AvatarSession/AvatarVideo";
 import { useStreamingAvatarSession } from "./logic/useStreamingAvatarSession";
 import { AvatarControls } from "./AvatarSession/AvatarControls";
 import { useVoiceChat } from "./logic/useVoiceChat";
-import { StreamingAvatarProvider, StreamingAvatarSessionState } from "./logic";
+import { StreamingAvatarSessionState } from "./logic";
 import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
 
-// Fixed configuration for the demo
+// ⏱️ Fixed session duration (2 minutes)
+const SESSION_DURATION_MS = 2 * 60 * 1000;
+
+// Avatar configuration
 const FIXED_CONFIG: StartAvatarRequest = {
   quality: AvatarQuality.High,
-  avatarName: "Ann_Therapist_public", // Using Ann Therapist as the default avatar
-  knowledgeId: undefined,
+  avatarName: "Ann_Therapist_public",
+  knowledgeId: "9ec7cfe8b1c34f29ac5a45acb3e26deb",
   voice: {
     rate: 1.0,
     emotion: VoiceEmotion.EXCITED,
@@ -43,22 +48,26 @@ function InteractiveAvatar() {
 
   const mediaStream = useRef<HTMLVideoElement>(null);
 
+  const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  // Get token from API
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Token fetch error:", {
           status: response.status,
           statusText: response.statusText,
-          error: errorText
+          error: errorText,
         });
         throw new Error(`Failed to get access token: ${errorText}`);
       }
-      
+
       const token = await response.text();
       console.log("Successfully received token");
       return token;
@@ -68,6 +77,7 @@ function InteractiveAvatar() {
     }
   }
 
+  // Start session + timer
   const startSessionV2 = useMemoizedFn(async (isVoiceChat: boolean) => {
     try {
       console.log("Starting session...");
@@ -75,7 +85,6 @@ function InteractiveAvatar() {
       console.log("Token received, initializing avatar...");
       const avatar = initAvatar(newToken);
 
-      // Set up event listeners
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
         console.log("Stream ready:", event.detail);
       });
@@ -90,15 +99,25 @@ function InteractiveAvatar() {
         console.log("Starting voice chat...");
         await startVoiceChat();
       }
+
+      // ⏳ Start 2-minute timer
+      const timeout = setTimeout(() => {
+        console.log("Session timeout reached");
+        stopAvatar();
+        setShowModal(true);
+      }, SESSION_DURATION_MS);
+
+      setSessionTimeout(timeout);
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      // You might want to show this error to the user
       alert("Failed to start session. Please check the console for details.");
     }
   });
 
+  // Clean up session and timer
   useUnmount(() => {
     stopAvatar();
+    if (sessionTimeout) clearTimeout(sessionTimeout);
   });
 
   useEffect(() => {
@@ -118,8 +137,13 @@ function InteractiveAvatar() {
             <AvatarVideo ref={mediaStream} />
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 p-8">
-              <h2 className="text-2xl font-semibold text-white">Interactive Avatar Demo</h2>
-              <p className="text-zinc-400 text-center">Start a conversation with Ann, your AI therapist</p>
+              <img alt="logo" className="w-auto h-8 mb-4" src={logo.src} />
+              <h2 className="text-2xl font-semibold text-white">
+                Onboarding by Interactive Avatar
+              </h2>
+              <p className="text-zinc-400 text-center">
+                Start a conversation with Ann, your Onboarding Assistant
+              </p>
             </div>
           )}
         </div>
@@ -140,8 +164,33 @@ function InteractiveAvatar() {
           )}
         </div>
       </div>
+
       {sessionState === StreamingAvatarSessionState.CONNECTED && (
         <MessageHistory />
+      )}
+
+      {/* 🪟 Modal after session ends */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-center">
+            <h3 className="text-xl font-semibold mb-4 text-black">
+              Your session has ended
+            </h3>
+            <p className="mb-6 text-zinc-700">
+              Thank you for speaking with Ann. If you’d like to continue,
+              schedule a call with Abhishek.
+            </p>
+            <a
+              href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2fHa3EsJRXhs1oZjgk3bj16fUy1rm4qTW0cJa1iy7aMhQv9jp05pyy8M8yykPnNbEuULZqWpvL" // 🔗 Replace with real link
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                Schedule a Call with Abhishek
+              </Button>
+            </a>
+          </div>
+        </div>
       )}
     </div>
   );
