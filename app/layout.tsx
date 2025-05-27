@@ -33,7 +33,15 @@ export default function RootLayout({
       className={`${fontSans.variable} ${fontMono.variable} font-sans`}
       lang="en"
     >
-      <head />
+      <head>
+        {/* 📈 Add DataFast tracking script */}
+        <script
+          defer
+          data-domain="onboardingtlc.vercel.app"
+          data-website-id="6835a1cdec4acbfb145b71f9"
+          src="https://datafa.st/js/script.js"
+        />
+      </head>
       <body className="min-h-screen bg-black text-white">
         <main className="relative flex flex-col h-screen w-screen">
           {children}

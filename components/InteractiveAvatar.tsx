@@ -24,6 +24,14 @@ import { MessageHistory } from "./AvatarSession/MessageHistory";
 // ⏱️ Fixed session duration (2 minutes)
 const SESSION_DURATION_MS = 2 * 60 * 1000;
 
+declare global {
+  interface Window {
+    datafast?: {
+      track: (event: string, metadata?: Record<string, any>) => void;
+    };
+  }
+}
+
 function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
@@ -49,7 +57,13 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
     sttSettings: {
       provider: STTProvider.DEEPGRAM,
     },
-  });  
+  });
+
+  const trackEvent = (event: string, metadata?: Record<string, any>) => {
+    if (typeof window !== "undefined" && window.datafast?.track) {
+      window.datafast.track(event, metadata);
+    }
+  };
 
   // Get token from API
   async function fetchAccessToken() {
@@ -88,31 +102,33 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   // Start session + timer
   const startSessionV2 = useMemoizedFn(async (isVoiceChat: boolean) => {
     try {
+      trackEvent("avatar_session_start", {
+        language: selectedLanguage,
+        type: isVoiceChat ? "voice" : "text", // 📊
+      });
+
       console.log("Starting session...");
       const newToken = await fetchAccessToken();
-      console.log("Token received, initializing avatar...");
       const avatar = initAvatar(newToken);
 
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
         console.log("Stream ready:", event.detail);
       });
+
       avatar.on(StreamingEvents.STREAM_DISCONNECTED, () => {
         console.log("Stream disconnected");
       });
 
-      console.log("Starting avatar with config:", getAvatarConfig());
       await startAvatar(getAvatarConfig());
 
       if (isVoiceChat) {
-        console.log("Starting voice chat...");
         await startVoiceChat();
       }
 
-      // ⏳ Start 2-minute timer
       const timeout = setTimeout(() => {
-        console.log("Session timeout reached");
         stopAvatar();
         setShowModal(true);
+        trackEvent("avatar_session_end", { language: selectedLanguage }); // 📊
       }, SESSION_DURATION_MS);
 
       setSessionTimeout(timeout);
@@ -164,8 +180,22 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
                 <div className="flex flex-col gap-3 text-white items-center">
                   <p className="text-lg">Choose a language to continue:</p>
                   <div className="flex flex-row gap-4">
-                    <Button onClick={() => setSelectedLanguage("en")}>English</Button>
-                    <Button onClick={() => setSelectedLanguage("hi")}>हिन्दी</Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedLanguage("en");
+                        trackEvent("language_selected", { language: "en" });
+                      }}
+                    >
+                      English
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedLanguage("hi");
+                        trackEvent("language_selected", { language: "hi" });
+                      }}
+                    >
+                      हिन्दी
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -198,8 +228,9 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
             </p>
             <a
               href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2fHa3EsJRXhs1oZjgk3bj16fUy1rm4qTW0cJa1iy7aMhQv9jp05pyy8M8yykPnNbEuULZqWpvL" // 🔗 Replace with real link
-              target="_blank"
               rel="noopener noreferrer"
+              target="_blank"
+              onClick={() => trackEvent("schedule_call_click")}
             >
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 Schedule a Call with Abhishek
