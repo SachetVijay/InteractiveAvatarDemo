@@ -32,32 +32,18 @@ declare global {
   }
 }
 
+type ExperienceType = "onboarding" | "training";
+
 function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
 
   const mediaStream = useRef<HTMLVideoElement>(null);
-
+  const [experience, setExperience] = useState<ExperienceType>("onboarding");
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<"hi" | "en" | null>(null);
-
-  const getAvatarConfig = (): StartAvatarRequest => ({
-    quality: AvatarQuality.High,
-    avatarName: "Ann_Therapist_public",
-    knowledgeId: "9ec7cfe8b1c34f29ac5a45acb3e26deb",
-    voice: {
-      rate: 1.0,
-      emotion: VoiceEmotion.EXCITED,
-      model: ElevenLabsModel.eleven_flash_v2_5,
-    },
-    language: selectedLanguage ?? "en", // fallback just in case
-    voiceChatTransport: VoiceChatTransport.LIVEKIT,
-    sttSettings: {
-      provider: STTProvider.DEEPGRAM,
-    },
-  });
 
   const trackEvent = (event: string, metadata?: Record<string, any>) => {
     if (typeof window !== "undefined" && window.datafast?.track) {
@@ -65,49 +51,54 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
     }
   };
 
-  // Get token from API
+  const getAvatarConfig = (): StartAvatarRequest => {
+    const configs = {
+      onboarding: {
+        avatarName: "Ann_Therapist_public",
+        knowledgeId: "9ec7cfe8b1c34f29ac5a45acb3e26deb",
+      },
+      training: {
+        avatarName: "SilasHR_public",
+        knowledgeId: "2e1311ee2ba14f2497348e15f9c8b805", // replace with real ID
+      },
+    };
+
+    return {
+      quality: AvatarQuality.High,
+      ...configs[experience],
+      voice: {
+        rate: 1.0,
+        emotion: VoiceEmotion.EXCITED,
+        model: ElevenLabsModel.eleven_flash_v2_5,
+      },
+      language: selectedLanguage ?? "en",
+      voiceChatTransport: VoiceChatTransport.LIVEKIT,
+      sttSettings: {
+        provider: STTProvider.DEEPGRAM,
+      },
+    };
+  };
+
   async function fetchAccessToken() {
-    try {
-      const response = await fetch("/api/get-access-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          "cf-turnstile-response": turnstileToken,
-        }),
-      });
+    const response = await fetch("/api/get-access-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "cf-turnstile-response": turnstileToken }),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
+    if (!response.ok) throw new Error("Failed to get token");
 
-        console.error("Token fetch error:", {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
-        });
-        throw new Error(`Failed to get access token: ${errorText}`);
-      }
-      const token = await response.text();
-
-      console.log("Successfully received token");
-
-      return token;
-    } catch (error) {
-      console.error("Error fetching access token:", error);
-      throw error;
-    }
+    return response.text();
   }
 
-  // Start session + timer
   const startSessionV2 = useMemoizedFn(async (isVoiceChat: boolean) => {
     try {
       trackEvent("avatar_session_start", {
+        experience,
         language: selectedLanguage,
-        type: isVoiceChat ? "voice" : "text", // 📊
+        type: isVoiceChat ? "voice" : "text",
       });
 
-      console.log("Starting session...");
       const newToken = await fetchAccessToken();
       const avatar = initAvatar(newToken);
 
@@ -128,17 +119,19 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
       const timeout = setTimeout(() => {
         stopAvatar();
         setShowModal(true);
-        trackEvent("avatar_session_end", { language: selectedLanguage }); // 📊
+        trackEvent("avatar_session_end", {
+          experience,
+          language: selectedLanguage,
+        });
       }, SESSION_DURATION_MS);
 
       setSessionTimeout(timeout);
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      alert("Failed to start session. Please check the console for details.");
+      alert("Failed to start session. Please check console.");
     }
   });
 
-  // Clean up session and timer
   useUnmount(() => {
     stopAvatar();
     if (sessionTimeout) clearTimeout(sessionTimeout);
@@ -151,10 +144,38 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
         mediaStream.current!.play();
       };
     }
-  }, [mediaStream, stream]);
+  }, [stream]);
+
+  const headline =
+    experience === "onboarding"
+      ? "Onboarding by Interactive Avatar"
+      : "Customer Service Training with Silas";
+
+  const subtitle =
+    experience === "onboarding"
+      ? "Start a conversation with Ann, your Onboarding Assistant"
+      : "Train with Silas on best practices for customer service";
 
   return (
     <div className="w-full flex flex-col gap-4">
+      {/* Experience switcher nav */}
+      <div className="flex justify-center gap-4 mb-2">
+        <Button
+          className={
+            experience === "onboarding" ? "bg-blue-700" : "bg-zinc-800"
+          }
+          onClick={() => setExperience("onboarding")}
+        >
+          Onboarding
+        </Button>
+        <Button
+          className={experience === "training" ? "bg-blue-700" : "bg-zinc-800"}
+          onClick={() => setExperience("training")}
+        >
+          Customer Service Training
+        </Button>
+      </div>
+
       <div className="flex flex-col rounded-xl bg-zinc-900 overflow-hidden">
         <div className="relative w-full aspect-video overflow-hidden flex flex-col items-center justify-center">
           {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
@@ -162,15 +183,12 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 p-8">
               <img alt="logo" className="w-auto h-8 mb-4" src={logo.src} />
-              <h2 className="text-2xl font-semibold text-white">
-                Onboarding by Interactive Avatar
-              </h2>
-              <p className="text-zinc-400 text-center">
-                Start a conversation with Ann, your Onboarding Assistant
-              </p>
+              <h2 className="text-2xl font-semibold text-white">{headline}</h2>
+              <p className="text-zinc-400 text-center">{subtitle}</p>
             </div>
           )}
         </div>
+
         <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
           {sessionState === StreamingAvatarSessionState.CONNECTED ? (
             <AvatarControls />
@@ -180,22 +198,8 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
                 <div className="flex flex-col gap-3 text-white items-center">
                   <p className="text-lg">Choose a language to continue:</p>
                   <div className="flex flex-row gap-4">
-                    <Button
-                      onClick={() => {
-                        setSelectedLanguage("en");
-                        trackEvent("language_selected", { language: "en" });
-                      }}
-                    >
-                      English
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setSelectedLanguage("hi");
-                        trackEvent("language_selected", { language: "hi" });
-                      }}
-                    >
-                      हिन्दी
-                    </Button>
+                    <Button onClick={() => setSelectedLanguage("en")}>English</Button>
+                    <Button onClick={() => setSelectedLanguage("hi")}>हिन्दी</Button>
                   </div>
                 </div>
               ) : (
@@ -211,11 +215,8 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
         </div>
       </div>
 
-      {sessionState === StreamingAvatarSessionState.CONNECTED && (
-        <MessageHistory />
-      )}
+      {sessionState === StreamingAvatarSessionState.CONNECTED && <MessageHistory />}
 
-      {/* 🪟 Modal after session ends */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-center">
@@ -223,11 +224,12 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
               Your session has ended
             </h3>
             <p className="mb-6 text-zinc-700">
-              Thank you for speaking with Ann. If you’d like to continue,
-              schedule a call with Abhishek.
+              Thank you for speaking with{" "}
+              {experience === "onboarding" ? "Ann" : "Silas"}. If you’d like to
+              continue, schedule a call with Abhishek.
             </p>
             <a
-              href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2fHa3EsJRXhs1oZjgk3bj16fUy1rm4qTW0cJa1iy7aMhQv9jp05pyy8M8yykPnNbEuULZqWpvL" // 🔗 Replace with real link
+              href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2fHa3EsJRXhs1oZjgk3bj16fUy1rm4qTW0cJa1iy7aMhQv9jp05pyy8M8yykPnNbEuULZqWpvL"
               rel="noopener noreferrer"
               target="_blank"
               onClick={() => trackEvent("schedule_call_click")}
