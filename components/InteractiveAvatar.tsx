@@ -173,33 +173,40 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
       : "Train with Silas on best practices for customer service";
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      {/* Experience switcher nav */}
-      <div className="flex justify-center gap-4 mb-2 mt-40">
+    <div className="w-full max-w-screen-lg mx-auto px-4 flex flex-col gap-4">
+      <div className="w-full flex flex-col gap-4">
+        <div className="flex justify-center gap-4 mt-20 md:mt-32 lg:mt-40 mb-4 px-4">
         <Button
           className={
             experience === "onboarding" ? "bg-blue-700" : "bg-zinc-800"
           }
           onClick={() => setExperience("onboarding")}
-        >
-          Onboarding
-        </Button>
-        <Button
-          className={experience === "training" ? "bg-blue-700" : "bg-zinc-800"}
-          onClick={() => setExperience("training")}
-        >
-          Customer Service Training
+          >
+            Onboarding
+          </Button>
+          <Button
+            className={
+              experience === "training" ? "bg-blue-700" : "bg-zinc-800"
+            }
+            onClick={() => setExperience("training")}
+          >
+            Customer Service Training
         </Button>
       </div>
 
       <div className="flex flex-col rounded-xl bg-zinc-900 overflow-hidden">
-        <div className="relative w-full aspect-video overflow-hidden flex flex-col items-center justify-center">
+        <div className="relative w-full aspect-[4/3] sm:aspect-video overflow-hidden flex flex-col items-center justify-center">
           {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
-            <AvatarVideo ref={mediaStream} />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-4 p-8">
-              <img alt="logo" className="w-auto h-8 mb-4" src={logo.src} />
-              <h2 className="text-2xl font-semibold text-white">{headline}</h2>
+              <AvatarVideo
+                ref={mediaStream}
+                onStop={() => setShowModal(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 p-8">
+                <img alt="logo" className="w-auto h-8 mb-4" src={logo.src} />
+                <h2 className="text-2xl font-semibold text-white">
+                  {headline}
+                </h2>
               <p className="text-zinc-400 text-center">{subtitle}</p>
             </div>
           )}
@@ -283,6 +290,7 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
