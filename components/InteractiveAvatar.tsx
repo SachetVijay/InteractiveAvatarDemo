@@ -175,7 +175,7 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   return (
     <div className="w-full max-w-screen-lg mx-auto px-4 flex flex-col gap-4">
       <div className="w-full flex flex-col gap-4">
-        <div className="flex justify-center gap-4 mt-20 md:mt-32 lg:mt-40 mb-4 px-4">
+        <div className="flex justify-center gap-4 mt-10 md:mt-16 lg:mt-20 mb-4 px-4">
         <Button
           className={
             experience === "onboarding" ? "bg-blue-700" : "bg-zinc-800"
