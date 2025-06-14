@@ -22,7 +22,7 @@ import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
 
 // ⏱️ Fixed session duration (2 minutes)
-const SESSION_DURATION_MS = 2 * 60 * 1000;
+const SESSION_DURATION_MS = 3 * 60 * 1000;
 
 declare global {
   interface Window {
@@ -78,6 +78,22 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
       },
     };
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      setShowModal(true);
+      event.preventDefault();
+      event.returnValue = ""; // Some browsers require this
+
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   async function fetchAccessToken() {
     const response = await fetch("/api/get-access-token", {
@@ -204,8 +220,12 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
                 </div>
               ) : (
                 <div className="flex flex-row gap-4">
-                  <Button onClick={() => startSessionV2(true)}>Start Voice Chat</Button>
-                  <Button onClick={() => startSessionV2(false)}>Start Text Chat</Button>
+                  <Button onClick={() => startSessionV2(true)}>
+                    Start Voice Chat
+                  </Button>
+                  <Button onClick={() => startSessionV2(false)}>
+                    Start Text Chat
+                  </Button>
                 </div>
               )}
             </>
@@ -219,25 +239,47 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-center">
-            <h3 className="text-xl font-semibold mb-4 text-black">
-              Your session has ended
-            </h3>
-            <p className="mb-6 text-zinc-700">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-black">
+            <h3 className="text-xl font-semibold mb-4">Session Ended</h3>
+            <p className="mb-4 text-zinc-700">
               Thank you for speaking with{" "}
-              {experience === "onboarding" ? "Ann" : "Silas"}. If you’d like to
-              continue, schedule a call with Abhishek.
+              {experience === "onboarding" ? "Ann" : "Silas"}. Enter your
+              details and we’ll get back to you.
             </p>
-            <a
-              href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2fHa3EsJRXhs1oZjgk3bj16fUy1rm4qTW0cJa1iy7aMhQv9jp05pyy8M8yykPnNbEuULZqWpvL"
-              rel="noopener noreferrer"
-              target="_blank"
-              onClick={() => trackEvent("schedule_call_click")}
+
+            <form
+              action="https://formcarry.com/s/QzT9Z4DWhcc"
+              className="flex flex-col gap-3"
+              method="POST"
             >
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                Schedule a Call with Abhishek
-              </Button>
-            </a>
+              <input
+                required
+                className="p-2 border rounded"
+                name="name"
+                placeholder="Your Name"
+                type="text"
+              />
+              <input
+                required
+                className="p-2 border rounded"
+                name="email"
+                placeholder="Your Email"
+                type="email"
+              />
+              <input
+                required
+                className="p-2 border rounded"
+                name="phone"
+                placeholder="Phone Number"
+              />
+              <input name="experience" type="hidden" value={experience} />
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+                type="submit"
+              >
+                Submit
+              </button>
+            </form>
           </div>
         </div>
       )}
