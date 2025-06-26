@@ -81,6 +81,7 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      stopAvatar();
       setShowModal(true);
       event.preventDefault();
       event.returnValue = ""; // Some browsers require this
@@ -176,11 +177,11 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
     <div className="w-full max-w-screen-lg mx-auto px-4 flex flex-col gap-4">
       <div className="w-full flex flex-col gap-4">
         <div className="flex justify-center gap-4 mt-10 md:mt-16 lg:mt-20 mb-4 px-4">
-        <Button
-          className={
-            experience === "onboarding" ? "bg-blue-700" : "bg-zinc-800"
-          }
-          onClick={() => setExperience("onboarding")}
+          <Button
+            className={
+              experience === "onboarding" ? "bg-blue-700" : "bg-zinc-800"
+            }
+            onClick={() => setExperience("onboarding")}
           >
             Onboarding
           </Button>
@@ -191,15 +192,18 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
             onClick={() => setExperience("training")}
           >
             Customer Service Training
-        </Button>
-      </div>
+          </Button>
+        </div>
 
-      <div className="flex flex-col rounded-xl bg-zinc-900 overflow-hidden">
-        <div className="relative w-full aspect-[4/3] sm:aspect-video overflow-hidden flex flex-col items-center justify-center">
-          {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
+        <div className="flex flex-col rounded-xl bg-zinc-900 overflow-hidden">
+          <div className="relative w-full aspect-[4/3] sm:aspect-video overflow-hidden flex flex-col items-center justify-center">
+            {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
               <AvatarVideo
                 ref={mediaStream}
-                onStop={() => setShowModal(true)}
+                onStop={() => {
+                  stopAvatar();
+                  setShowModal(true);
+                }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-4 p-8">
