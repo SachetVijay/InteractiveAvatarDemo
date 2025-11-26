@@ -20,6 +20,8 @@ import { useVoiceChat } from "./logic/useVoiceChat";
 import { StreamingAvatarSessionState } from "./logic";
 import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
+import { useSynopsis } from "./logic/useSynopsis";
+import { SynopsisPanel } from "./SynopsisPanel";
 
 // ⏱️ Fixed session duration (2 minutes)
 const SESSION_DURATION_MS = 3 * 60 * 1000;
@@ -38,6 +40,7 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
+  const { synopsis, isLoading: isSynopsisLoading } = useSynopsis();
 
   const mediaStream = useRef<HTMLVideoElement>(null);
   const [experience, setExperience] = useState<ExperienceType>("onboarding");
@@ -211,90 +214,91 @@ function InteractiveAvatar({ turnstileToken }: { turnstileToken: string }) {
                 <h2 className="text-2xl font-semibold text-white">
                   {headline}
                 </h2>
-              <p className="text-zinc-400 text-center">{subtitle}</p>
-            </div>
-          )}
-        </div>
+                <p className="text-zinc-400 text-center">{subtitle}</p>
+              </div>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
-          {sessionState === StreamingAvatarSessionState.CONNECTED ? (
-            <AvatarControls />
-          ) : sessionState === StreamingAvatarSessionState.INACTIVE ? (
-            <>
-              {!selectedLanguage ? (
-                <div className="flex flex-col gap-3 text-white items-center">
-                  <p className="text-lg">Choose a language to continue:</p>
-                  <div className="flex flex-row gap-4">
-                    <Button onClick={() => setSelectedLanguage("en")}>English</Button>
-                    <Button onClick={() => setSelectedLanguage("hi")}>हिन्दी</Button>
+          <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
+            {sessionState === StreamingAvatarSessionState.CONNECTED ? (
+              <AvatarControls />
+            ) : sessionState === StreamingAvatarSessionState.INACTIVE ? (
+              <>
+                {!selectedLanguage ? (
+                  <div className="flex flex-col gap-3 text-white items-center">
+                    <p className="text-lg">Choose a language to continue:</p>
+                    <div className="flex flex-row gap-4">
+                      <Button onClick={() => setSelectedLanguage("en")}>English</Button>
+                      <Button onClick={() => setSelectedLanguage("hi")}>हिन्दी</Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-row gap-4">
-                  <Button onClick={() => startSessionV2(true)}>
-                    Start Voice Chat
-                  </Button>
-                  <Button onClick={() => startSessionV2(false)}>
-                    Start Text Chat
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <LoadingIcon />
-          )}
-        </div>
-      </div>
-
-      {sessionState === StreamingAvatarSessionState.CONNECTED && <MessageHistory />}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-black">
-            <h3 className="text-xl font-semibold mb-4">Session Ended</h3>
-            <p className="mb-4 text-zinc-700">
-              Thank you for speaking with{" "}
-              {experience === "onboarding" ? "Ann" : "Silas"}. Enter your
-              details and we’ll get back to you.
-            </p>
-
-            <form
-              action="https://formcarry.com/s/QzT9Z4DWhcc"
-              className="flex flex-col gap-3"
-              method="POST"
-            >
-              <input
-                required
-                className="p-2 border rounded"
-                name="name"
-                placeholder="Your Name"
-                type="text"
-              />
-              <input
-                required
-                className="p-2 border rounded"
-                name="email"
-                placeholder="Your Email"
-                type="email"
-              />
-              <input
-                required
-                className="p-2 border rounded"
-                name="phone"
-                placeholder="Phone Number"
-              />
-              <input name="experience" type="hidden" value={experience} />
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
-                type="submit"
-              >
-                Submit
-              </button>
-            </form>
+                ) : (
+                  <div className="flex flex-row gap-4">
+                    <Button onClick={() => startSessionV2(true)}>
+                      Start Voice Chat
+                    </Button>
+                    <Button onClick={() => startSessionV2(false)}>
+                      Start Text Chat
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <LoadingIcon />
+            )}
           </div>
         </div>
-      )}
-    </div>
+
+        {sessionState === StreamingAvatarSessionState.CONNECTED && <MessageHistory />}
+
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-lg text-black">
+              <h3 className="text-xl font-semibold mb-4">Session Ended</h3>
+              <p className="mb-4 text-zinc-700">
+                Thank you for speaking with{" "}
+                {experience === "onboarding" ? "Ann" : "Silas"}. Enter your
+                details and we’ll get back to you.
+              </p>
+
+              <form
+                action="https://formcarry.com/s/QzT9Z4DWhcc"
+                className="flex flex-col gap-3"
+                method="POST"
+              >
+                <input
+                  required
+                  className="p-2 border rounded"
+                  name="name"
+                  placeholder="Your Name"
+                  type="text"
+                />
+                <input
+                  required
+                  className="p-2 border rounded"
+                  name="email"
+                  placeholder="Your Email"
+                  type="email"
+                />
+                <input
+                  required
+                  className="p-2 border rounded"
+                  name="phone"
+                  placeholder="Phone Number"
+                />
+                <input name="experience" type="hidden" value={experience} />
+                <button
+                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+                  type="submit"
+                >
+                  Submit
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        <SynopsisPanel synopsis={synopsis} isLoading={isSynopsisLoading} />
+      </div>
     </div>
   );
 }
