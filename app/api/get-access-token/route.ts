@@ -30,6 +30,7 @@ export async function POST(req: Request) {
 
     // ✅ Verified — continue to HeyGen token fetch
     const apiKey = process.env.HEYGEN_API_KEY;
+    console.log("HEYGEN_API_KEY present:", !!apiKey);
     if (!apiKey) {
       throw new Error("API key is missing from .env");
     }
@@ -63,7 +64,11 @@ export async function POST(req: Request) {
 
     return new Response(responseData.data.token, { status: 200 });
   } catch (error) {
-    console.error("Detailed error:", error);
+    console.error("Detailed error in get-access-token:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return new Response(
       error instanceof Error ? error.message : "Failed to retrieve access token",
       {
