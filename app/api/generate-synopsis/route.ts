@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     });
     try {
         const { messages, currentSynopsis } = await req.json();
+        console.log("Received synopsis request. Messages count:", messages?.length);
 
         if (!messages || !Array.isArray(messages)) {
             return new Response("Invalid messages format", { status: 400 });
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
     Please update the synopsis.
     `;
 
+        console.log("Calling OpenAI...");
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
@@ -49,6 +51,7 @@ export async function POST(req: Request) {
         });
 
         const result = completion.choices[0].message.content;
+        console.log("OpenAI response:", result);
         const bulletPoints = result
             ?.split("\n")
             .filter((line) => line.trim().startsWith("-"))
