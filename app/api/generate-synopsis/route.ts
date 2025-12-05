@@ -1,16 +1,16 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GOOGLE_API_KEY;
 
     if (!apiKey) {
-        console.error("OPENAI_API_KEY is missing");
-        return new Response("OpenAI API Key is missing", { status: 500 });
+        console.error("GOOGLE_API_KEY is missing");
+        return new Response("Google API Key is missing", { status: 500 });
     }
 
-    const openai = new OpenAI({
-        apiKey: apiKey,
-    });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
     try {
         const { messages, currentSynopsis } = await req.json();
         console.log("Received synopsis request. Messages count:", messages?.length);
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
             return new Response("Invalid messages format", { status: 400 });
         }
 
-        const systemPrompt = `
+        const prompt = `
     You are a helpful assistant that summarizes conversations in real-time.
     Your task is to generate a concise, bulleted synopsis of the conversation so far.
     
@@ -29,9 +29,7 @@ export async function POST(req: Request) {
     - Update the existing synopsis based on the new messages.
     - Use clear and professional language.
     - Return ONLY the bullet points, one per line, starting with "- ".
-    `;
 
-        const userPrompt = `
     Current Synopsis:
     ${currentSynopsis ? currentSynopsis.join("\n") : "None"}
 
@@ -41,18 +39,13 @@ export async function POST(req: Request) {
     Please update the synopsis.
     `;
 
-        console.log("Calling OpenAI...");
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-            ],
-        });
+        console.log("Calling Gemini...");
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
 
-        const result = completion.choices[0].message.content;
-        console.log("OpenAI response:", result);
-        const bulletPoints = result
+        console.log("Gemini response:", text);
+        const bulletPoints = text
             ?.split("\n")
             .filter((line) => line.trim().startsWith("-"))
             .map((line) => line.trim().substring(2));

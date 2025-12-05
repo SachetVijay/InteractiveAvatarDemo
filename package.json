@@ -9,6 +9,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@heygen/streaming-avatar": "^2.0.13",
     "@radix-ui/react-select": "^2.1.7",
     "@radix-ui/react-switch": "^1.1.4",
