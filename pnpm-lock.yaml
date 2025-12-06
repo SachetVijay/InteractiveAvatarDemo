@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
       '@heygen/streaming-avatar':
         specifier: ^2.0.13
         version: 2.0.14
@@ -165,6 +168,10 @@ packages:
 
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
+
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@heygen/streaming-avatar@2.0.14':
     resolution: {integrity: sha512-597qNHx9e//Xq/hfNA3DqqSA4vq/DFXu8xM9Vfy1JjREl4hVzlpD9QfXCMoMcLESIFVRjJwYitZxJNU8cnheug==}
@@ -2453,6 +2460,8 @@ snapshots:
       react-dom: 19.1.0(react@19.1.0)
 
   '@floating-ui/utils@0.2.9': {}
+
+  '@google/generative-ai@0.24.1': {}
 
   '@heygen/streaming-avatar@2.0.14':
     dependencies:
